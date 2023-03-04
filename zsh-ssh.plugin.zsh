@@ -20,6 +20,9 @@ if [[ $PMSPEC != *f* ]]; then
   fpath+=( "${0:h}/functions" )
 fi
 
+typeset -gA Plugins
+Plugins[ZSH_SSH_PLUGIN_DIR]="${0:h}"
+
 autoload -Uz fzf-complete-ssh
 
 [ -z "$fzf_ssh_default_completion" ] && {
