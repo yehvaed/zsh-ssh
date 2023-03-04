@@ -14,8 +14,9 @@ _ssh-host-list() {
     {
       if (NF == 2 && tolower($1) == "include")
         {
-          cmd = "sed -s '\''$G'\'' " $2 " 2> /dev/null"
+          cmd = "cat " $2 " 2> /dev/null"
           # print cmd
+          # cmd | getline line
           while ( (cmd | getline line) > 0 ) {
             print line
           }
@@ -26,6 +27,8 @@ _ssh-host-list() {
       }
     }
   ' config)
+
+  # echo $ssh_config
   ssh_config=$(echo $ssh_config | command grep -v -E "^\s*#[^_]")
 
   popd >/dev/null
@@ -166,19 +169,26 @@ fzf-complete-ssh() {
       return
     fi
 
+    local args=()
+
+    if [[ "${ZSH_SSH_HOST_PREVIEW_ENABLED}" == "true" ]]; then
+      args+=(
+        --preview 'ssh -T -G $(cut -f 1 -d " " <<< {}) | grep -i -E "^User |^HostName |^Port |^ControlMaster |^ForwardAgent |^LocalForward |^IdentityFile |^RemoteForward |^ProxyCommand |^ProxyJump " | column -t' \
+        --preview-window=right:40%
+      )
+    fi
+
     result=$(_fzf-list-generator $result | fzf \
-      --height 40% \
+      --height 60% \
       --ansi \
       --border \
       --cycle \
-      --info=inline \
       --header-lines=2 \
       --reverse \
-      --prompt='SSH Remote > ' \
+      --prompt='ssh > ' \
       --no-separator \
       --bind 'shift-tab:up,tab:down,bspace:backward-delete-char/eof' \
-      --preview 'ssh -T -G $(cut -f 1 -d " " <<< {}) | grep -i -E "^User |^HostName |^Port |^ControlMaster |^ForwardAgent |^LocalForward |^IdentityFile |^RemoteForward |^ProxyCommand |^ProxyJump " | column -t' \
-      --preview-window=right:40%
+      ${args[*]}
     )
 
     if [ -n "$result" ]; then
@@ -195,13 +205,4 @@ fzf-complete-ssh() {
   fi
 }
 
-
-[ -z "$fzf_ssh_default_completion" ] && {
-  binding=$(bindkey '^I')
-  [[ $binding =~ 'undefined-key' ]] || fzf_ssh_default_completion=$binding[(s: :w)2]
-  unset binding
-}
-
-
-zle -N fzf-complete-ssh
-bindkey '^I' fzf-complete-ssh
+fzf-complete-ssh $@
